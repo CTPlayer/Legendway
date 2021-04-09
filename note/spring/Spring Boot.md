@@ -61,3 +61,17 @@ public class LocalCacheVerifier {
 **Using the ApplicationRunner or CommandLineRunner**
 If you need to run some specific code once the SpringApplication has started, you can implement the ApplicationRunner or
 CommandLineRunner interfaces.
+
+#### Externalized Configuration
+**Importing Additional Data**
+可以通过spring.config.import在application.properties中引入其他配置，而且引入的配置优先级更高。
+
+**Type-safe Configuration Properties**  
+@ConfigurationProperties将配置文件中的配置属性映射到相应的Java Bean。需要配合@Component,@EnableConfigurationProperties或
+@ConfigurationPropertiesScan使用：  
+使用方式1：配合@Component使用  
+![img.png](../../images/img.png)  
+使用方式2：使用@EnableConfigurationProperties告知Spring Boot开启支持（也可用在带有@Configuration注解的类上）  
+![img_1.png](../../images/img_1.png)  
+使用方式3：配合@ConfigurationPropertiesScan使用（也可以加载启动类上）  
+![img_2.png](../../images/img_2.png)
