@@ -58,7 +58,7 @@ public class LocalCacheVerifier {
 **Accessing Application Arguments**
 通过注入org.springframework.boot.ApplicationArguments bean获取参数。
 
-**Using the ApplicationRunner or CommandLineRunner**
+**Using the ApplicationRunner or CommandLineRunner**  
 If you need to run some specific code once the SpringApplication has started, you can implement the ApplicationRunner or
 CommandLineRunner interfaces.
 
@@ -75,3 +75,65 @@ CommandLineRunner interfaces.
 ![img_1.png](../../images/img_1.png)  
 使用方式3：配合@ConfigurationPropertiesScan使用（也可以加载启动类上）  
 ![img_2.png](../../images/img_2.png)
+
+#### Profiles
+```java
+@Configuration(proxyBeanMethods = false)
+@Profile("production")
+public class ProductionConfiguration {
+
+    // ...
+
+}
+```
+我们可以使用以下方式来激活：
+```properties
+spring.profiles.active=dev,hsqldb
+```
+或者启动时指定命令行参数：--spring.profiles.active=dev,hsqldb  
+
+**Profile Groups**
+```properties
+spring.profiles.group.production[0]=proddb
+spring.profiles.group.production[1]=prodmq
+```
+Our application can now be started using --spring.profiles.active=production to active the production, proddb and 
+prodmq profiles in one hit.  
+
+#### Developing Web Applications
+**@JsonComponent**  
+在Spring Boot中如果你使用的是Jackson，当你想要自定义序列化方式时，使用@JsonComponent可以无需手动操作OjectMapper对象，直接在该注解注释的
+类中添加序列化与反序列化方法就可以了。  
+```java
+@JsonComponent
+public class Example {
+
+    public static class Serializer extends JsonSerializer<SomeObject> {
+        // ...
+    }
+
+    public static class Deserializer extends JsonDeserializer<SomeObject> {
+        // ...
+    }
+}
+```
+
+**MessageCodesResolver**  
+如果设置了spring.mvc.message-codes-resolver-format属性，则在springmvc进行参数绑定的时候，会出现一些绑定错误，那么他就会讲绑定错误的
+信息传递到BindingResult中，可以从其对象中获取。  
+```java
+@ResponseBody
+@RequestMapping(value="/save", method= RequestMethod.GET)
+public String saveUser(User user, BindingResult bindingResult) {
+// 如果在绑定的时候，发生错误，那么错误信息就会保存在BindingResult 这里面，从里里面可以获取具体信息
+    if(bindingResult.hasErrors()){
+        bindingResult.getAllErrors().forEach(item -> {
+            System.out.println(item.getObjectName());
+            System.out.println(item.getArguments());
+            System.out.println(item.getDefaultMessage());
+            System.out.println(item.getCode());
+        });
+    }
+    return "success";
+}
+```
