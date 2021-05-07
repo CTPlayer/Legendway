@@ -125,7 +125,7 @@ public class Example {
 @ResponseBody
 @RequestMapping(value="/save", method= RequestMethod.GET)
 public String saveUser(User user, BindingResult bindingResult) {
-// 如果在绑定的时候，发生错误，那么错误信息就会保存在BindingResult 这里面，从里里面可以获取具体信息
+    // 如果在绑定的时候，发生错误，那么错误信息就会保存在BindingResult 这里面，从里里面可以获取具体信息
     if(bindingResult.hasErrors()){
         bindingResult.getAllErrors().forEach(item -> {
             System.out.println(item.getObjectName());
@@ -137,3 +137,17 @@ public String saveUser(User user, BindingResult bindingResult) {
     return "success";
 }
 ```
+
+**Static Content**  
+默认资源文件放在resources目录下/static里(或者/public，/resources，/META-INF/resources)，可以通过spring.web.resources.static-locations
+指定静态资源存放路径；  
+默认情况下，静态资源文件访问路径为/**，但是可以通过spring.mvc.static-path-pattern指定静态资源的访问路径：
+```yaml
+spring:
+  mvc:
+    static-path-pattern: "/resources/**"
+```
+
+**ConfigurableWebBindingInitializer**  
+[参考连接]：https://blog.csdn.net/Michean/article/details/90901450  
+配合PropertyEditorSupport，可自定义属性编辑器，例如将将字符进行HTML转义或者将String参数转换成Date
