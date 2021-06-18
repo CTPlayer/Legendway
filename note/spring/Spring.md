@@ -17,6 +17,8 @@ public abstract class CommandManager {
     protected abstract MyCommand createCommand();
 }
 ```
+被@Lookup注解标注的方法会被重写，然后根据其返回值的类型，容器调用BeanFactory的getBean()方法来返回一个bean。  
+<https://blog.csdn.net/jerry010101/article/details/84997062>
 * scope proxy
   @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE,proxyMode = ScopedProxyMode.TARGET_CLASS)
   
@@ -105,55 +107,7 @@ public interface BeanPostProcessor {
 }
 ```
 当一个BeanPostProcessor的实现类注册到Spring IOC容器后，对于该Spring IOC容器所创建的每个bean实例在初始化方法（如afterPropertiesSet和任意已声明的init方法）
-调用前，将会调用BeanPostProcessor中的postProcessBeforeInitialization方法，而在bean实例初始化方法调用完成后，
+调用前，将会调用BeanAOP——面向切面编程,通过为目标类织入切面的方式,实现对目标类功能的增强。按切面被织如到目标类中的时间划分,主要有以下几种:PostProcessor中的postProcessBeforeInitialization方法，而在bean实例初始化方法调用完成后，
 则会调用BeanPostProcessor中的postProcessAfterInitialization方法。  
 
 spring容器通过BeanPostProcessor给了我们一个机会对Spring管理的bean进行再加工。
-
-##### Customizing Configuration Metadata with a BeanFactoryPostProcessor
-BeanFactoryPostProcessor接口可以在bean未被实例化之前获取bean的定义即配置元数据，然后根据需要进行更改。  
-
-##### Customizing Instantiation Logic with a FactoryBean
-
-Spring中有两种类型的Bean,一种是普通Bean,另一种是工厂Bean,即FactoryBean。Spring FactoryBean是创建复杂的bean,一般的bean直接用xml配置即可,
-如果一个bean的创建过程中涉及到很多其他的bean和复杂的逻辑,用xml配置比较困难,这时可以考虑用FactoryBean。  
-
-用法：https://juejin.cn/post/6844903954615107597
-
-#### Classpath Scanning and Managed Components
-##### Defining Bean Metadata within Components
-如果使用 @Configuration 注解修饰的类，并且该注解中的 proxyBeanMethods 属性的值为 true，则会为这个 bean 创建一个代理类，该代理类会拦截所有被 @Bean
-修饰的方法，在拦截的方法逻辑中，会从容器中返回所需要的单例对象。  
-如果使用 @Component 注解修饰的类，则不会为这个 bean 创建一个代理类。 那么我们就会直接执行用户的方法，所以每次都会返回一个新的对象。  
-如果将 @Configuration 注解中的 proxyBeanMethods 属性的值设置为 false，那么它的行为是否就会跟 @Component 注解一样。  
-
-只要是@Component注解修饰的类里面都可以定义@Bean，并且都可以注册到Spring容器里面。其实不仅仅是@Component，只要是被@Component修饰的注解同样也可以定义@Bean，
-比如：@Repository、@Service、@Controller @Configuration，甚至是接口的default方法上的@Bean也可以被扫描加入到Spring容器里面。  
-
-##### Generating an Index of Candidate Components
-在SpringFramework5.0引入了一个注解@Indexed ，它可以为Spring的模式注解添加索引，以提升应用启动性能。  
-
-在应用中有大量使用@ComponentScan扫描的package包含的类越多的时候，Spring模式注解解析耗时就越长。  
-在项目中使用的时候需要导入一个spring-context-indexer jar包，使用maven方式，引入jar配置如下：  
-```xml
-<dependencies>
-    <dependency>
-        <groupId>org.springframework</groupId>
-        <artifactId>spring-context-indexer</artifactId>
-        <version>5.1.12.RELEASE</version>
-        <optional>true</optional>
-    </dependency>
-</dependencies>
-```
-然后在代码中，对于使用了模式注解的类上加上@Indexed注解即可。如下：  
-```java
-@Indexed
-@Controller
-public class HelloController {
-
-}
-```
-
-在项目中使用了@Indexed之后，编译打包的时候会在项目中自动生成META-INT/spring.components文件。当Spring应用上下文执行ComponentScan扫描时，
-META-INT/spring.components将会被CandidateComponentsIndexLoader 读取并加载，转换为CandidateComponentsIndex对象，
-这样的话@ComponentScan不在扫描指定的package，而是读取CandidateComponentsIndex对象，从而达到提升性能的目的。  
