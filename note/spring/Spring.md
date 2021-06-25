@@ -111,3 +111,7 @@ public interface BeanPostProcessor {
 则会调用BeanPostProcessor中的postProcessAfterInitialization方法。  
 
 spring容器通过BeanPostProcessor给了我们一个机会对Spring管理的bean进行再加工。
+
+### Resources
+#### The ResourceLoaderAware Interface
+实现ResourceLoaderAware接口或者通过注入的方式获取ResourceLoader，操作资源文件。
