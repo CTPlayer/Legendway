@@ -5,9 +5,9 @@
   <artifactId>spring-boot-starter-aop</artifactId>
 </dependency>
 ```
-ps: 类上面增加 @Aspect 标注,切点必须受 Spring 上下文管理。
+PS: 类上面增加 @Aspect 标注,切点必须受 Spring 上下文管理。
 
-### 常见的几种异常通知
+### 常见的几种通知
 ```java
 /**
  * 定义一个方法, 用于声明切入点表达式. 一般地, 该方法中再不需要添入其他的代码.

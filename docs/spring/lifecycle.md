@@ -1,28 +1,5 @@
-### The IoC Container
-#### Bean Scopes
-当一个scope为prototype的bean注入到singleton的bean中，由于singleton的bean只会实例化一次，所以导致作为
-依赖的prototype的bean并不能拥有预期的生命周期。  
-解决方式： 
-* @Lookup
-```java
-public abstract class CommandManager {
-
-    public Object process(Object commandState) {
-        MyCommand command = createCommand();
-        command.setState(commandState);
-        return command.execute();
-    }
-
-    @Lookup
-    protected abstract MyCommand createCommand();
-}
-```
-被@Lookup注解标注的方法会被重写，然后根据其返回值的类型，容器调用BeanFactory的getBean()方法来返回一个bean。  
-<https://blog.csdn.net/jerry010101/article/details/84997062>
-* scope proxy
-  @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE,proxyMode = ScopedProxyMode.TARGET_CLASS)
-  
-#### Customizing the Nature of Bean
+### Customizing the Nature of Bean
+生命周期总览：
 ![img.png](../../images/20210507-1.jpg)
 ##### Lifecycle Callbacks
 * Initialization Callbacks(优先级从高到低)  
@@ -91,7 +68,10 @@ public interface SmartLifecycle extends Lifecycle, Phased {
 The callback is invoked after population of normal bean properties but before an initialization callback such as InitializingBean,
 afterPropertiesSet, or a custom init-method.  
 
-#### Container Extension Points
+##### The ResourceLoaderAware Interface
+实现ResourceLoaderAware接口或者通过注入的方式获取ResourceLoader，操作资源文件。
+
+### Container Extension Points
 ##### Customizing Beans by Using a BeanPostProcessor（可以用来处理自定义注解，例如Autowired标签的解析逻辑主要在AutowiredAnnotationBeanPostProcessor类中）
 ```java
 public interface BeanPostProcessor {
@@ -111,7 +91,3 @@ public interface BeanPostProcessor {
 则会调用BeanPostProcessor中的postProcessAfterInitialization方法。  
 
 spring容器通过BeanPostProcessor给了我们一个机会对Spring管理的bean进行再加工。
-
-### Resources
-#### The ResourceLoaderAware Interface
-实现ResourceLoaderAware接口或者通过注入的方式获取ResourceLoader，操作资源文件。

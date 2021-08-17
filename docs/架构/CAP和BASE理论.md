@@ -12,9 +12,11 @@
 此时就与A发生冲突，如果是为了保证A，则会出现正常的分区可以写入数据，有故障的分区不能写入数据，则与C就冲突了。因此分布式系统理论上不可能选择CA架构，而必须选择CP或AP架构。
 
 AP:When there is no partition tolerance, the system is available but with inconsistent data.  
+
 ![](../../images/20210701-1.png)
 
 CP:When there is no partition tolerance, system is not fully available. But the data is consistent.  
+
 ![](../../images/20210701-2.png)
 
 ### Redis in CAP
@@ -30,6 +32,7 @@ PS：这里我理解的Redis单机版多个Master指的是多个服务器上分�
 PS：某个Master挂了，会选取一个Slave顶替升级为Master，保证了A，但由于主从复制不及时的问题会无法保证C。
 
 redis集群是一个由多个主从节点群组成的分布式服务器群。  
+
 ![](../../images/20210701-3.png)
 
 ## BASE 理论
@@ -63,7 +66,7 @@ BASE是基本可用，柔性状态，最终一致性三个短语的缩写，核�
  
   所以redis的复制模式是属于AP的模式。保证可用性，在主从复制中“主”有数据，但是可能“从”还没有数据，这个时候，一旦主挂掉或者网络抖动等各种原因，可能会切换到“从”节点，这个时候可能会导致两个业务线程同时获取得两把锁。  
   
-  redis采用了AP模型，它本身无法确保我们对一致性的要求。redis官方推荐redlock算法来保证。（redlock？）
+  redis采用了AP模型，它本身无法确保我们对一致性的要求。redis官方推荐redLock算法来保证。（redlock？）
 * 基于zookeeper实现  
   zk的模式是CP模型，也就是说，当zk锁提供给我们进行访问的时候，在zk集群中能确保这把锁在zk的每一个节点都存在。  
 
