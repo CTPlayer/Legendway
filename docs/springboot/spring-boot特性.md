@@ -51,7 +51,7 @@ If you need to run some specific code once the SpringApplication has started, yo
 CommandLineRunner interfaces.
 
 #### Externalized Configuration
-**Importing Additional Data**
+**Importing Additional Data**  
 可以通过spring.config.import在application.properties中引入其他配置，而且引入的配置优先级更高。
 
 #### Profiles
