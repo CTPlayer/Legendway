@@ -1,5 +1,6 @@
 ## Java 基础
 * [集合](./docs/basic/集合.md)
+* [泛型](./docs/basic/泛型.md)
 
 ## Spring
 * [Spring AOP 常见的几种通知类型](docs/spring/aop.md)
