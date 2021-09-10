@@ -15,3 +15,4 @@
 
 ## MySQL
 * [redo log,binlog,undo log MySQL 三大日志](./docs/db/mysql日志.md)
+* [mysql 锁和 MVCC](./docs/db/mysql锁.md)
