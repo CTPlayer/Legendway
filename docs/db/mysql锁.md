@@ -151,3 +151,185 @@ RC 和当前读能读到最新数据是因为，RC 隔离级别下每一个 sele
 不同事务或者相同事务的对同一记录行的修改，会使该记录行的 undo log 成为一条链表，链首就是最新的记录，链尾就是最早的旧记录。
 
 ## 再谈数据库锁
+
+判断一条 select 语句的加锁方式，需要注意三个点：
+
+* 当前查询语句所在事务的隔离级别；
+* 查询列是否存在索引；
+* 如果存在索引是聚簇索引还是非聚簇索引。
+
+#### 分析
+
+假设有表如下，pId 为主键索引:
+
+| pId(int) | name(varchar) | num(int) | 
+| :-----| :---- | :---- |
+| 1 | aaa | 100 | 
+| 2 | bbb | 200 | 
+| 3 | bbb | 300 |
+| 7 | ccc | 200 |
+
+###### RC/RU + 条件列非索引
+
+```sql
+select *
+from table
+where num = 200
+```
+
+不加任何锁，是快照读
+
+```sql
+select *
+from table
+where num > 200
+```
+
+不加任何锁，是快照读
+
+```sql
+select *
+from table
+where num = 200 lock in share mode
+```
+
+当 num = 200，有两条记录。这两条记录对应的 pId = 2，7，因此在 pId = 2，7 的聚簇索引上加行级 S 锁，采用当前读
+
+```sql
+select *
+from table
+where num > 200 lock in share mode
+```
+
+当 num > 200，有一条记录。这条记录对应的 pId = 3，因此在 pId = 3 的聚簇索引上加上行级 S 锁，采用当前读
+
+```sql
+select *
+from table
+where num = 200 for update
+```
+
+当 num = 200，有两条记录。这两条记录对应的 pId = 2，7，因此在 pId = 2，7 的聚簇索引上加行级 X 锁，采用当前读
+
+```sql
+select *
+from table
+where num > 200 for update
+```
+
+当 num > 200，有一条记录。这条记录对应的 pId = 3，因此在 pId = 3 的聚簇索引上加上行级X锁，采用当前读
+
+###### RC/RU + 条件列是聚簇索引
+
+pId 使用聚簇索引，此情况和 RC/RU + 条件列非索引类似
+
+```sql
+select *
+from table
+where pId = 2
+```
+
+不加任何锁，是快照读
+
+```sql
+select *
+from table
+where pId > 2
+```
+
+不加任何锁，是快照读
+
+```sql
+select *
+from table
+where pId = 2 lock in share mode
+```
+
+在 pId = 2 的聚簇索引上，加 S 锁，为当前读
+
+```sql
+select *
+from table
+where pId > 2 lock in share mode
+```
+
+在 pId = 3，7 的聚簇索引上，加 S 锁，为当前读
+
+```sql
+select *
+from table
+where pId = 2 for update
+```
+
+在 pId = 2 的聚簇索引上，加 X 锁，为当前读
+
+```sql
+select *
+from table
+where pId > 2 for update
+```
+
+在 pId = 3，7 的聚簇索引上，加 X 锁，为当前读
+
+**为什么条件列加不加索引，加锁情况是一样的？**
+
+当 sql 运行的过程中，MySQL 并不知道哪些数据行是 num = 200 的（没有索引嘛），如果一个条件无法通过索引快速过滤，存储引擎层面就会将所有记录加锁后返回，再由 MySQL Server 层进行过滤。 在 MySQL
+Server 过滤条件，发现不满足后，会调用 unlock_row 方法，把不满足条件的记录释放锁。这样做，保证了最后只会持有满足条件记录上的锁，但是每条记录的加锁操作还是不能省略的。 因此你看起来最终结果是一样的。但是 RC/RU
++条件列非索引比本例多了一个释放不符合条件的锁的过程！
+
+###### RC/RU + 条件列是非聚簇索引
+
+我们在 num 列上建上非唯一索引。此时有一棵聚簇索引(主键索引，pId)形成的 B+ 索引树，其叶子节点为硬盘上的真实数据。以及另一棵非聚簇索引(非唯一索引，num)
+形成的 B+ 索引树，其叶子节点依然为索引节点，保存了 num 列的字段值，和对应的聚簇索引。
+
+```sql
+select *
+from table
+where num = 200
+```
+
+不加任何锁，是快照读
+
+```sql
+select *
+from table
+where num > 200
+```
+
+不加任何锁，是快照读
+
+```sql
+select *
+from table
+where num = 200 lock in share mode
+```
+
+当 num = 200，由于 num 列上有索引，因此先在 num = 200 的两条索引记录上加行级S锁。接着，去聚簇索引树上查询，这两条记录对应的 pId = 2，7，因此在 pId = 2，7 的聚簇索引上加行级 S 锁，采用当前读。
+
+```sql
+select *
+from table
+where num > 200 lock in share mode
+```
+
+当 num > 200，由于 num 列上有索引，因此先在符合条件的 num = 300 的一条索引记录上加行级 S 锁。接着，去聚簇索引树上查询，这条记录对应的 pId = 3，因此在 pId = 3 的聚簇索引上加行级 S
+锁，采用当前读。
+
+```sql
+select *
+from table
+where num = 200 for update
+```
+
+当 num = 200，由于 num 列上有索引，因此先在 num = 200 的两条索引记录上加行级 X 锁。接着，去聚簇索引树上查询，这两条记录对应的 pId = 2，7，因此在 pId = 2，7 的聚簇索引上加行级 X
+锁，采用当前读。
+
+```sql
+select *
+from table
+where num > 200 for update
+```
+
+当 num > 200，由于 num 列上有索引，因此先在符合条件的 num = 300 的一条索引记录上加行级 X 锁。接着，去聚簇索引树上查询，这条记录对应的 pId = 3，因此在 pId = 3 的聚簇索引上加行级 X
+锁，采用当前读。
+
