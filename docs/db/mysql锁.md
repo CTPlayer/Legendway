@@ -333,3 +333,10 @@ where num > 200 for update
 当 num > 200，由于 num 列上有索引，因此先在符合条件的 num = 300 的一条索引记录上加行级 X 锁。接着，去聚簇索引树上查询，这条记录对应的 pId = 3，因此在 pId = 3 的聚簇索引上加行级 X
 锁，采用当前读。
 
+## 参考文章
+
+* [MySQL数据库事务，锁和MVCC](https://www.jianshu.com/p/ad879487a571)
+* [【原创】惊！史上最全的select加锁分析(Mysql)](https://www.cnblogs.com/rjzheng/p/9950951.html)
+* [Innodb中的事务隔离级别和锁的关系](https://tech.meituan.com/2014/08/20/innodb-lock.html)
+* [InnoDB对MVCC的实现](https://github.com/Snailclimb/JavaGuide/blob/master/docs/database/mysql/InnoDB%E5%AF%B9MVCC%E7%9A%84%E5%AE%9E%E7%8E%B0.md)
+
