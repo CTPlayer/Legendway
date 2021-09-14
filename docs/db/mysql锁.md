@@ -333,6 +333,168 @@ where num > 200 for update
 当 num > 200，由于 num 列上有索引，因此先在符合条件的 num = 300 的一条索引记录上加行级 X 锁。接着，去聚簇索引树上查询，这条记录对应的 pId = 3，因此在 pId = 3 的聚簇索引上加行级 X
 锁，采用当前读。
 
+###### RR/Serializable + 条件列非索引
+
+RR 级别需要多考虑的就是 gap lock，他的加锁特征在于，在非索引条件下无论你怎么查都是锁全表。
+
+```sql
+select * from table where num = 200
+```
+
+在 RR 级别下，不加任何锁，是快照读。
+
+在 Serializable 级别下，在 pId = 1,2,3,7（全表所有记录）的聚簇索引上加 S 锁。并且在聚簇索引的所有间隙(-∞,1)(1,2)(2,3)(3,7)(7,+∞)加 gap lock。
+
+```sql
+select * from table where num > 200
+```
+
+在RR级别下，不加任何锁，是快照读。
+
+在 Serializable 级别下，在 pId = 1,2,3,7（全表所有记录）的聚簇索引上加 S 锁。并且在聚簇索引的所有间隙(-∞,1)(1,2)(2,3)(3,7)(7,+∞)加 gap lock。
+
+```sql
+select * from table where num = 200 lock in share mode
+```
+
+在 pId = 1,2,3,7（全表所有记录）的聚簇索引上加 S 锁。并且在聚簇索引的所有间隙(-∞,1)(1,2)(2,3)(3,7)(7,+∞)加 gap lock。
+
+```sql
+select * from table where num > 200 lock in share mode
+```
+
+在 pId = 1,2,3,7（全表所有记录）的聚簇索引上加 S 锁。并且在聚簇索引的所有间隙(-∞,1)(1,2)(2,3)(3,7)(7,+∞)加 gap lock。
+
+```sql
+select * from table where num = 200 for update
+```
+
+在 pId = 1,2,3,7（全表所有记录）的聚簇索引上加 X 锁。并且在聚簇索引的所有间隙(-∞,1)(1,2)(2,3)(3,7)(7,+∞)加 gap lock。
+
+```sql
+select * from table where num > 200 for update
+```
+
+在 pId = 1,2,3,7（全表所有记录）的聚簇索引上加 X 锁。并且在聚簇索引的所有间隙(-∞,1)(1,2)(2,3)(3,7)(7,+∞)加 gap lock。
+
+###### RR/Serializable + 条件列是聚簇索引
+
+pId 用的就是聚簇索引。该情况的加锁特征在于，如果 where 后的条件为精确查询(= 的情况)，那么只存在 record lock。如果 where 后的条件为范围查询(> 或 < 的情况)，那么存在的是 record lock + gap lock。
+
+```sql
+select * from table where pId = 2
+```
+
+在 RR 级别下，不加任何锁，是快照读。
+
+在 Serializable 级别下，是当前读，在 pId = 2 的聚簇索引上加 S 锁，不存在 gap lock。
+
+```sql
+select * from table where pId > 2
+```
+
+在 RR 级别下，不加任何锁，是快照读。
+
+在 Serializable 级别下，是当前读，在 pId = 3,7 的聚簇索引上加 S 锁。在(2,3)(3,7)(7,+∞)加上 gap lock。
+
+```sql
+select * from table where pId = 2 lock in share mode
+```
+
+是当前读，在 pId = 2 的聚簇索引上加 S 锁，不存在 gap lock。
+
+```sql
+select * from table where pId > 2 lock in share mode
+```
+
+是当前读，在 pId = 3,7 的聚簇索引上加 S 锁。在(2,3)(3,7)(7,+∞)加上 gap lock。
+
+```sql
+select * from table where pId = 2 for update
+```
+
+是当前读，在 pId = 2 的聚簇索引上加 X 锁。
+
+```sql
+select * from table where pId > 2 for update
+```
+
+在 pId = 3,7 的聚簇索引上加 X 锁。在(2,3)(3,7)(7,+∞)加上 gap lock。
+
+```sql
+select * from table where pId = 6 [lock in share mode|for update]
+```
+
+注意了，pId = 6 是不存在的列，这种情况会在(3,7)上加 gap lock。
+
+```sql
+select * from table where pId > 18 [lock in share mode|for update]
+```
+
+注意了，pId > 18，查询结果是空的。在这种情况下，是在(7,+∞)上加 gap lock。
+
+###### RR/Serializable + 条件列是非聚簇索引
+
+这里非聚簇索引，需要区分是否为唯一索引。因为如果是非唯一索引，间隙锁的加锁方式是有区别的。先说一下，唯一索引的情况。如果是唯一索引，情况和 RR/Serializable + 条件列是聚簇索引类似，唯一有区别的是:这个时候有两棵索引树，
+加锁是加在对应的非聚簇索引树和聚簇索引树上！大家可以自行推敲!
+
+下面说一下，非聚簇索引是非唯一索引的情况，他和唯一索引的区别就是通过索引进行精确查询以后，不仅存在 record lock，还存在 gap lock。而通过唯一索引进行精确查询后，只存在 record lock，不存在 gap lock。
+老规矩在 num 列建立非唯一索引。
+
+RC/RU 隔离级别下条件列时非聚簇索引时，索引是不是唯一索引都无所谓，因为在该隔离界别下不存在 gap lock。
+
+```sql
+select * from table where num = 200
+```
+
+在 RR 级别下，不加任何锁，是快照读。
+
+在 Serializable 级别下，是当前读，在 pId=2，7 的聚簇索引上加 S 锁，在 num = 200 的非聚集索引上加 S 锁，在(100,200)(200,300)加上 gap lock。
+
+```sql
+select * from table where num > 200
+```
+
+在RR级别下，不加任何锁，是快照读。
+
+在 Serializable 级别下，是当前读，在 pId = 3 的聚簇索引上加 S 锁，在 num = 300 的非聚集索引上加S锁。在(200,300)(300,+∞)加上 gap lock。
+
+```sql
+select * from table where num = 200 lock in share mode
+```
+
+是当前读，在 pId = 2，7 的聚簇索引上加 S 锁，在 num = 20 0的非聚集索引上加 S 锁，在(100,200)(200,300)加上 gap lock。
+
+```sql
+select * from table where num > 200 lock in share mode
+```
+
+是当前读，在 pId = 3 的聚簇索引上加 S 锁，在 num = 300 的非聚集索引上加 S 锁。在(200,300)(300,+∞)加上 gap lock。
+
+```sql
+select * from table where num = 200 for update
+```
+
+是当前读，在 pId = 2，7 的聚簇索引上加 S 锁，在 num = 200 的非聚集索引上加 X 锁，在(100,200)(200,300)加上 gap lock。
+
+```sql
+select * from table where num > 200 for update
+```
+
+是当前读，在 pId = 3 的聚簇索引上加 S 锁，在 num = 300 的非聚集索引上加X锁。在(200,300)(300,+∞)加上 gap lock。
+
+```sql
+select * from table where num = 250 [lock in share mode|for update]
+```
+
+注意了，num = 250 是不存在的列，这种情况会在(200,300)上加 gap lock。
+
+```sql
+select * from table where num > 400 [lock in share mode|for update]
+```
+
+注意了，pId > 400，查询结果是空的。在这种情况下，是在(400,+∞)上加 gap lock。
+
 ## 参考文章
 
 * [MySQL数据库事务，锁和MVCC](https://www.jianshu.com/p/ad879487a571)
