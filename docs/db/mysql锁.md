@@ -338,7 +338,9 @@ where num > 200 for update
 RR 级别需要多考虑的就是 gap lock，他的加锁特征在于，在非索引条件下无论你怎么查都是锁全表。
 
 ```sql
-select * from table where num = 200
+select *
+from table
+where num = 200
 ```
 
 在 RR 级别下，不加任何锁，是快照读。
@@ -346,7 +348,9 @@ select * from table where num = 200
 在 Serializable 级别下，在 pId = 1,2,3,7（全表所有记录）的聚簇索引上加 S 锁。并且在聚簇索引的所有间隙(-∞,1)(1,2)(2,3)(3,7)(7,+∞)加 gap lock。
 
 ```sql
-select * from table where num > 200
+select *
+from table
+where num > 200
 ```
 
 在RR级别下，不加任何锁，是快照读。
@@ -354,35 +358,46 @@ select * from table where num > 200
 在 Serializable 级别下，在 pId = 1,2,3,7（全表所有记录）的聚簇索引上加 S 锁。并且在聚簇索引的所有间隙(-∞,1)(1,2)(2,3)(3,7)(7,+∞)加 gap lock。
 
 ```sql
-select * from table where num = 200 lock in share mode
+select *
+from table
+where num = 200 lock in share mode
 ```
 
 在 pId = 1,2,3,7（全表所有记录）的聚簇索引上加 S 锁。并且在聚簇索引的所有间隙(-∞,1)(1,2)(2,3)(3,7)(7,+∞)加 gap lock。
 
 ```sql
-select * from table where num > 200 lock in share mode
+select *
+from table
+where num > 200 lock in share mode
 ```
 
 在 pId = 1,2,3,7（全表所有记录）的聚簇索引上加 S 锁。并且在聚簇索引的所有间隙(-∞,1)(1,2)(2,3)(3,7)(7,+∞)加 gap lock。
 
 ```sql
-select * from table where num = 200 for update
+select *
+from table
+where num = 200 for update
 ```
 
 在 pId = 1,2,3,7（全表所有记录）的聚簇索引上加 X 锁。并且在聚簇索引的所有间隙(-∞,1)(1,2)(2,3)(3,7)(7,+∞)加 gap lock。
 
 ```sql
-select * from table where num > 200 for update
+select *
+from table
+where num > 200 for update
 ```
 
 在 pId = 1,2,3,7（全表所有记录）的聚簇索引上加 X 锁。并且在聚簇索引的所有间隙(-∞,1)(1,2)(2,3)(3,7)(7,+∞)加 gap lock。
 
 ###### RR/Serializable + 条件列是聚簇索引
 
-pId 用的就是聚簇索引。该情况的加锁特征在于，如果 where 后的条件为精确查询(= 的情况)，那么只存在 record lock。如果 where 后的条件为范围查询(> 或 < 的情况)，那么存在的是 record lock + gap lock。
+pId 用的就是聚簇索引。该情况的加锁特征在于，如果 where 后的条件为精确查询(= 的情况)，那么只存在 record lock。如果 where 后的条件为范围查询(> 或 < 的情况)，那么存在的是 record lock +
+gap lock。
 
 ```sql
-select * from table where pId = 2
+select *
+from table
+where pId = 2
 ```
 
 在 RR 级别下，不加任何锁，是快照读。
@@ -390,7 +405,9 @@ select * from table where pId = 2
 在 Serializable 级别下，是当前读，在 pId = 2 的聚簇索引上加 S 锁，不存在 gap lock。
 
 ```sql
-select * from table where pId > 2
+select *
+from table
+where pId > 2
 ```
 
 在 RR 级别下，不加任何锁，是快照读。
@@ -398,37 +415,51 @@ select * from table where pId > 2
 在 Serializable 级别下，是当前读，在 pId = 3,7 的聚簇索引上加 S 锁。在(2,3)(3,7)(7,+∞)加上 gap lock。
 
 ```sql
-select * from table where pId = 2 lock in share mode
+select *
+from table
+where pId = 2 lock in share mode
 ```
 
 是当前读，在 pId = 2 的聚簇索引上加 S 锁，不存在 gap lock。
 
 ```sql
-select * from table where pId > 2 lock in share mode
+select *
+from table
+where pId > 2 lock in share mode
 ```
 
 是当前读，在 pId = 3,7 的聚簇索引上加 S 锁。在(2,3)(3,7)(7,+∞)加上 gap lock。
 
 ```sql
-select * from table where pId = 2 for update
+select *
+from table
+where pId = 2 for update
 ```
 
 是当前读，在 pId = 2 的聚簇索引上加 X 锁。
 
 ```sql
-select * from table where pId > 2 for update
+select *
+from table
+where pId > 2 for update
 ```
 
 在 pId = 3,7 的聚簇索引上加 X 锁。在(2,3)(3,7)(7,+∞)加上 gap lock。
 
 ```sql
-select * from table where pId = 6 [lock in share mode|for update]
+select *
+from table
+where pId = 6 [lock in share mode|for
+update]
 ```
 
 注意了，pId = 6 是不存在的列，这种情况会在(3,7)上加 gap lock。
 
 ```sql
-select * from table where pId > 18 [lock in share mode|for update]
+select *
+from table
+where pId > 18 [lock in share mode|for
+update]
 ```
 
 注意了，pId > 18，查询结果是空的。在这种情况下，是在(7,+∞)上加 gap lock。
@@ -444,7 +475,9 @@ select * from table where pId > 18 [lock in share mode|for update]
 RC/RU 隔离级别下条件列时非聚簇索引时，索引是不是唯一索引都无所谓，因为在该隔离界别下不存在 gap lock。
 
 ```sql
-select * from table where num = 200
+select *
+from table
+where num = 200
 ```
 
 在 RR 级别下，不加任何锁，是快照读。
@@ -452,7 +485,9 @@ select * from table where num = 200
 在 Serializable 级别下，是当前读，在 pId=2，7 的聚簇索引上加 S 锁，在 num = 200 的非聚集索引上加 S 锁，在(100,200)(200,300)加上 gap lock。
 
 ```sql
-select * from table where num > 200
+select *
+from table
+where num > 200
 ```
 
 在RR级别下，不加任何锁，是快照读。
@@ -460,40 +495,70 @@ select * from table where num > 200
 在 Serializable 级别下，是当前读，在 pId = 3 的聚簇索引上加 S 锁，在 num = 300 的非聚集索引上加S锁。在(200,300)(300,+∞)加上 gap lock。
 
 ```sql
-select * from table where num = 200 lock in share mode
+select *
+from table
+where num = 200 lock in share mode
 ```
 
 是当前读，在 pId = 2，7 的聚簇索引上加 S 锁，在 num = 20 0的非聚集索引上加 S 锁，在(100,200)(200,300)加上 gap lock。
 
 ```sql
-select * from table where num > 200 lock in share mode
+select *
+from table
+where num > 200 lock in share mode
 ```
 
 是当前读，在 pId = 3 的聚簇索引上加 S 锁，在 num = 300 的非聚集索引上加 S 锁。在(200,300)(300,+∞)加上 gap lock。
 
 ```sql
-select * from table where num = 200 for update
+select *
+from table
+where num = 200 for update
 ```
 
 是当前读，在 pId = 2，7 的聚簇索引上加 S 锁，在 num = 200 的非聚集索引上加 X 锁，在(100,200)(200,300)加上 gap lock。
 
 ```sql
-select * from table where num > 200 for update
+select *
+from table
+where num > 200 for update
 ```
 
 是当前读，在 pId = 3 的聚簇索引上加 S 锁，在 num = 300 的非聚集索引上加X锁。在(200,300)(300,+∞)加上 gap lock。
 
 ```sql
-select * from table where num = 250 [lock in share mode|for update]
+select *
+from table
+where num = 250 [lock in share mode|for
+update]
 ```
 
 注意了，num = 250 是不存在的列，这种情况会在(200,300)上加 gap lock。
 
 ```sql
-select * from table where num > 400 [lock in share mode|for update]
+select *
+from table
+where num > 400 [lock in share mode|for
+update]
 ```
 
 注意了，pId > 400，查询结果是空的。在这种情况下，是在(400,+∞)上加 gap lock。
+
+## MySQL 在 RR 级别解决幻读了吗？
+
+MySQL 没有完全解决快照读下的幻读问题。
+
+可以做这个实验：
+
+1. 当前 DB 已有 id 5, 10, 15 三条数据；
+2. 事务 A 查询 id < 10 的数据，可以查出一行记录 id = 5；
+3. 事务 B 插入 id = 6 的数据；
+4. 事务 A 再查询 id < 10 的数据，可以查出一行记录 id = 5，查不出 id = 6 的数据（读场景，解决了幻读）；
+5. 事务 A 可以更新/删除 id = 6 的数据，不能插入 id = 6 的数据（写场景，幻读不彻底）。
+
+这个很好理解，MySQL 虽然通过 MVCC 的版本号来解决了读场景下的幻读，但对于上面第 5 步那种写场景的情况，其实是无能为力的，因为 MVCC 毕竟是无锁实现。
+
+所以如果后续要对数据进行写操作，还是通过 for update 语句上锁比较稳妥，不然就可能会出现上面第 5 步那样的问题。
 
 ## 参考文章
 
@@ -501,4 +566,4 @@ select * from table where num > 400 [lock in share mode|for update]
 * [【原创】惊！史上最全的select加锁分析(Mysql)](https://www.cnblogs.com/rjzheng/p/9950951.html)
 * [Innodb中的事务隔离级别和锁的关系](https://tech.meituan.com/2014/08/20/innodb-lock.html)
 * [InnoDB对MVCC的实现](https://github.com/Snailclimb/JavaGuide/blob/master/docs/database/mysql/InnoDB%E5%AF%B9MVCC%E7%9A%84%E5%AE%9E%E7%8E%B0.md)
-
+* [mysql innodb RR级别到底有没有解决幻读？](https://blog.csdn.net/huiyunfei/article/details/106106550)
