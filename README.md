@@ -14,6 +14,7 @@
 ## 分布式
 * [CAP 和 BASE 理论](docs/分布式/CAP和BASE理论.md)
 * [分布式事务](docs/分布式/分布式事务.md)
+* [分布式锁](docs/分布式/分布式锁.md)
 
 ## MySQL
 * [redo log,binlog,undo log MySQL 三大日志](./docs/db/mysql日志.md)
